@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Futures Journal</string>
+    <string name="warning_title">🚨 매매 중단 권고 🚨</string>
+    <string name="trigger_detected">다음 조건이 동시 감지됐습니다:</string>
+    <string name="type_prompt">계속하려면 정확히 타이핑하세요:</string>
+    <string name="type_hint">여기에 타이핑…</string>
+    <string name="type_correct">✓ 정확히 타이핑하셨습니다</string>
+    <string name="type_wrong">✗ 다시 확인하세요</string>
+    <string name="btn_open_bitget">🛑 비트겟으로 가서 청산하기</string>
+    <string name="btn_cancel">취소</string>
+    <string name="btn_proceed">그래도 진행</string>
+    <string name="emergency_active_title">Emergency Brake 활성</string>
+    <string name="emergency_active_text">매매 보호 모드 작동 중</string>
+    <string name="permission_overlay_title">다른 앱 위에 표시 권한</string>
+    <string name="permission_overlay_desc">비트겟 앱 위에 경고를 띄우려면 필요합니다</string>
+    <string name="permission_notification_title">알림 권한</string>
+    <string name="permission_notification_desc">푸시 알림을 받기 위해 필요합니다</string>
+    <string name="permission_battery_title">배터리 최적화 예외</string>
+    <string name="permission_battery_desc">백그라운드에서 안정적으로 작동하기 위해 필요합니다</string>
+    <string name="onboarding_complete">Emergency Brake가 준비됐습니다</string>
+    <string name="login_token_hint">서버 토큰 입력</string>
+    <string name="login_btn">로그인</string>
+    <string name="token_error">토큰 오류</string>
+</resources>
