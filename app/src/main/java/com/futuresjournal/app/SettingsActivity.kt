@@ -1,33 +1,33 @@
-// 오버레이 설정 화면 — 타이핑 멘트 선택/추가, 카운트다운 시간 설정
+// 오버레이 설정 화면 — 타이핑 멘트 선택/추가/삭제, 카운트다운 시간 설정
 package com.futuresjournal.app
 
+import android.app.AlertDialog
 import android.os.Bundle
+import android.text.InputType
 import android.view.Gravity
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.RadioButton
+import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.futuresjournal.app.util.OverlayPrefs
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var sentenceList: LinearLayout
-    private lateinit var inputCountdown: EditText
-    private lateinit var inputCustom: EditText
+    private lateinit var tvSelected: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        supportActionBar?.hide()
         setContentView(R.layout.activity_settings)
-        supportActionBar?.title = "오버레이 설정"
 
-        sentenceList = findViewById(R.id.sentence_list)
-        inputCountdown = findViewById(R.id.input_countdown)
-        inputCustom = findViewById(R.id.input_custom_sentence)
+        tvSelected = findViewById(R.id.tv_selected_sentence)
+        val inputCountdown = findViewById<EditText>(R.id.input_countdown)
 
         inputCountdown.setText(OverlayPrefs.getCountdownSeconds(this).toString())
+        refreshSelected()
 
         findViewById<Button>(R.id.btn_save_countdown).setOnClickListener {
             val secs = inputCountdown.text.toString().toIntOrNull()
@@ -39,77 +39,127 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<Button>(R.id.btn_add_sentence).setOnClickListener {
-            val text = inputCustom.text.toString().trim()
-            if (text.isEmpty()) {
-                Toast.makeText(this, "멘트를 입력하세요", Toast.LENGTH_SHORT).show()
-            } else if (OverlayPrefs.getAllSentences(this).contains(text)) {
-                Toast.makeText(this, "이미 존재하는 멘트입니다", Toast.LENGTH_SHORT).show()
-            } else {
-                OverlayPrefs.addCustomSentence(this, text)
-                inputCustom.text.clear()
-                refreshSentenceList()
-            }
+        findViewById<Button>(R.id.btn_open_sentence_list).setOnClickListener {
+            showSentenceDialog()
         }
-
-        refreshSentenceList()
     }
 
-    private fun refreshSentenceList() {
-        sentenceList.removeAllViews()
-        val selected = OverlayPrefs.getSelectedSentence(this)
-        val defaults = OverlayPrefs.DEFAULT_SENTENCES.toSet()
-        val all = OverlayPrefs.getAllSentences(this)
+    private fun refreshSelected() {
+        tvSelected.text = OverlayPrefs.getSelectedSentence(this)
+    }
 
-        all.forEach { sentence ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, 8, 0, 8)
-            }
+    private fun px(dp: Int) = (dp * resources.displayMetrics.density).toInt()
 
-            val radio = RadioButton(this).apply {
-                text = sentence
-                isChecked = sentence == selected
-                setTextColor(0xFFFFFFFF.toInt())
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                setOnClickListener {
-                    OverlayPrefs.setSelectedSentence(this@SettingsActivity, sentence)
-                    refreshSentenceList()
+    private fun showSentenceDialog() {
+        val scroll = ScrollView(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(px(4), px(8), px(4), px(8))
+        }
+        scroll.addView(container)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("멘트 선택")
+            .setView(scroll)
+            .create()
+
+        fun rebuild() {
+            container.removeAllViews()
+            val selected = OverlayPrefs.getSelectedSentence(this)
+            val defaults = OverlayPrefs.DEFAULT_SENTENCES.toSet()
+
+            OverlayPrefs.getAllSentences(this).forEach { sentence ->
+                val isSelected = sentence == selected
+
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(px(12), px(12), px(12), px(12))
+                    setBackgroundColor(if (isSelected) 0x22FFFFFF else 0x00000000)
                 }
-            }
-            row.addView(radio)
 
-            // 커스텀 멘트에만 삭제 버튼 표시
-            if (!defaults.contains(sentence)) {
-                val deleteBtn = Button(this).apply {
-                    text = "삭제"
-                    setTextColor(0xFFFF5252.toInt())
-                    backgroundTintList = null
-                    background = null
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
+                val tv = TextView(this).apply {
+                    text = sentence
+                    setTextColor(if (isSelected) 0xFFFFFFFF.toInt() else 0xFFCCCCCC.toInt())
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = px(8)
+                    }
                     setOnClickListener {
-                        OverlayPrefs.removeCustomSentence(this@SettingsActivity, sentence)
-                        if (OverlayPrefs.getSelectedSentence(this@SettingsActivity) == sentence) {
-                            OverlayPrefs.setSelectedSentence(this@SettingsActivity, OverlayPrefs.DEFAULT_SENTENCE)
-                        }
-                        refreshSentenceList()
+                        OverlayPrefs.setSelectedSentence(this@SettingsActivity, sentence)
+                        refreshSelected()
+                        dialog.dismiss()
                     }
                 }
-                row.addView(deleteBtn)
+                row.addView(tv)
+
+                if (!defaults.contains(sentence)) {
+                    val deleteBtn = TextView(this).apply {
+                        text = "삭제"
+                        setTextColor(0xFFFF5252.toInt())
+                        textSize = 13f
+                        setPadding(px(8), px(4), px(8), px(4))
+                        setOnClickListener {
+                            OverlayPrefs.removeCustomSentence(this@SettingsActivity, sentence)
+                            if (OverlayPrefs.getSelectedSentence(this@SettingsActivity) == sentence) {
+                                OverlayPrefs.setSelectedSentence(this@SettingsActivity, OverlayPrefs.DEFAULT_SENTENCE)
+                                refreshSelected()
+                            }
+                            rebuild()
+                        }
+                    }
+                    row.addView(deleteBtn)
+                }
+
+                container.addView(row)
+
+                val divider = android.view.View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+                    setBackgroundColor(0xFF333333.toInt())
+                }
+                container.addView(divider)
             }
 
-            sentenceList.addView(row)
-
-            // 항목 사이 구분선
-            val divider = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
-                setBackgroundColor(0xFF333333.toInt())
+            // 커스텀 멘트 추가 버튼
+            val addBtn = Button(this).apply {
+                text = "＋ 커스텀 멘트 추가"
+                setTextColor(0xFFFFFFFF.toInt())
+                backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFD32F2F.toInt())
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = px(16) }
+                setOnClickListener { showAddSentenceDialog { rebuild() } }
             }
-            sentenceList.addView(divider)
+            container.addView(addBtn)
         }
+
+        rebuild()
+        dialog.show()
+    }
+
+    private fun showAddSentenceDialog(onAdded: () -> Unit) {
+        val input = EditText(this).apply {
+            hint = "새 멘트를 입력하세요"
+            inputType = InputType.TYPE_CLASS_TEXT
+            setPadding(px(20), px(16), px(20), px(8))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("커스텀 멘트 추가")
+            .setView(input)
+            .setPositiveButton("추가") { _, _ ->
+                val text = input.text.toString().trim()
+                when {
+                    text.isEmpty() -> Toast.makeText(this, "멘트를 입력하세요", Toast.LENGTH_SHORT).show()
+                    OverlayPrefs.getAllSentences(this).contains(text) ->
+                        Toast.makeText(this, "이미 존재하는 멘트입니다", Toast.LENGTH_SHORT).show()
+                    else -> {
+                        OverlayPrefs.addCustomSentence(this, text)
+                        onAdded()
+                    }
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
     }
 }
