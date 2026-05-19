@@ -66,7 +66,6 @@ class SettingsActivity : AppCompatActivity() {
         fun rebuild() {
             container.removeAllViews()
             val selected = OverlayPrefs.getSelectedSentence(this)
-            val defaults = OverlayPrefs.DEFAULT_SENTENCES.toSet()
 
             OverlayPrefs.getAllSentences(this).forEach { sentence ->
                 val isSelected = sentence == selected
@@ -93,23 +92,23 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 row.addView(tv)
 
-                if (!defaults.contains(sentence)) {
-                    val deleteBtn = TextView(this).apply {
-                        text = "삭제"
-                        setTextColor(0xFFFF5252.toInt())
-                        textSize = 13f
-                        setPadding(px(8), px(4), px(8), px(4))
-                        setOnClickListener {
-                            OverlayPrefs.removeCustomSentence(this@SettingsActivity, sentence)
-                            if (OverlayPrefs.getSelectedSentence(this@SettingsActivity) == sentence) {
-                                OverlayPrefs.setSelectedSentence(this@SettingsActivity, OverlayPrefs.DEFAULT_SENTENCE)
-                                refreshSelected()
-                            }
-                            rebuild()
+                val deleteBtn = TextView(this).apply {
+                    text = "삭제"
+                    setTextColor(0xFFFF5252.toInt())
+                    textSize = 13f
+                    setPadding(px(8), px(4), px(8), px(4))
+                    setOnClickListener {
+                        OverlayPrefs.removeSentence(this@SettingsActivity, sentence)
+                        if (OverlayPrefs.getSelectedSentence(this@SettingsActivity) == sentence) {
+                            val fallback = OverlayPrefs.getAllSentences(this@SettingsActivity)
+                                .firstOrNull() ?: OverlayPrefs.DEFAULT_SENTENCE
+                            OverlayPrefs.setSelectedSentence(this@SettingsActivity, fallback)
+                            refreshSelected()
                         }
+                        rebuild()
                     }
-                    row.addView(deleteBtn)
                 }
+                row.addView(deleteBtn)
 
                 container.addView(row)
 

@@ -9,6 +9,7 @@ object OverlayPrefs {
     private const val PREFS = "overlay_settings"
     private const val KEY_SENTENCE = "selected_sentence"
     private const val KEY_CUSTOM = "custom_sentences"
+    private const val KEY_HIDDEN = "hidden_defaults"
     private const val KEY_COUNTDOWN = "countdown_seconds"
 
     const val DEFAULT_SENTENCE = "나는 충동이 아닌 원칙으로 매매할 것을 맹세한다"
@@ -62,8 +63,25 @@ object OverlayPrefs {
         prefs(context).edit().putString(KEY_CUSTOM, JSONArray(list).toString()).apply()
     }
 
-    fun getAllSentences(context: Context): List<String> =
-        DEFAULT_SENTENCES + getCustomSentences(context)
+    private fun getHiddenDefaults(context: Context): Set<String> =
+        prefs(context).getStringSet(KEY_HIDDEN, emptySet()) ?: emptySet()
+
+    fun hideDefaultSentence(context: Context, sentence: String) {
+        val hidden = getHiddenDefaults(context).toMutableSet()
+        hidden.add(sentence)
+        prefs(context).edit().putStringSet(KEY_HIDDEN, hidden).apply()
+    }
+
+    // 어떤 멘트든 단일 진입점으로 삭제
+    fun removeSentence(context: Context, sentence: String) {
+        if (DEFAULT_SENTENCES.contains(sentence)) hideDefaultSentence(context, sentence)
+        else removeCustomSentence(context, sentence)
+    }
+
+    fun getAllSentences(context: Context): List<String> {
+        val hidden = getHiddenDefaults(context)
+        return DEFAULT_SENTENCES.filter { it !in hidden } + getCustomSentences(context)
+    }
 
     fun getCountdownSeconds(context: Context): Int =
         prefs(context).getInt(KEY_COUNTDOWN, 10)
