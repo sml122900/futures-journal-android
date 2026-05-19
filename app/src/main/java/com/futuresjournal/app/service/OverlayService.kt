@@ -1,3 +1,4 @@
+// 오버레이 서비스 — SYSTEM_ALERT_WINDOW로 풀스크린 경고 표시
 package com.futuresjournal.app.service
 
 import android.app.Notification
@@ -28,12 +29,12 @@ import com.futuresjournal.app.R
 import com.futuresjournal.app.api.ApiClient
 import com.futuresjournal.app.api.models.EmergencyPayload
 import com.futuresjournal.app.util.Logger
+import com.futuresjournal.app.util.OverlayPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class OverlayService : Service() {
 
@@ -79,43 +80,35 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            @Suppress("DEPRECATION")
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             PixelFormat.TRANSLUCENT
         )
 
-        val inflater = LayoutInflater.from(this)
-        overlayView = inflater.inflate(R.layout.overlay_warning, null)
+        overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_warning, null)
+        val view = overlayView!!
 
-        setupWarningContent(overlayView!!, payload)
-        setupTypeChallenge(overlayView!!, payload)
-        startCountdown(overlayView!!, payload.countdownSeconds)
+        // 컨텍스트 정보 표시
+        view.findViewById<TextView>(R.id.context_text).text =
+            "${payload.symbol} ${payload.side} × ${String.format("%.1f", payload.sizeMultiplier)}배"
+
+        // 로컬 설정에서 멘트/카운트다운 로드
+        val sentence = OverlayPrefs.getSelectedSentence(this)
+        val countdownSecs = OverlayPrefs.getCountdownSeconds(this)
+
+        view.findViewById<TextView>(R.id.target_sentence).text = sentence
+        applyLevelStyle(view, payload.level)
+        setupTypeChallenge(view, sentence, payload.sessionId)
+        startCountdown(view, countdownSecs)
 
         if (payload.level == 3) {
             vibratePattern()
             playWarningSound()
         }
 
-        windowManager.addView(overlayView, params)
-    }
-
-    private fun setupWarningContent(view: View, payload: EmergencyPayload) {
-        view.findViewById<TextView>(R.id.target_sentence).text = payload.forceSentence
-        view.findViewById<TextView>(R.id.context_text).text =
-            "${payload.symbol} ${payload.side} × ${String.format("%.1f", payload.sizeMultiplier)}배 사이즈"
-
-        val triggerList = view.findViewById<LinearLayout>(R.id.trigger_list)
-        payload.triggers.forEach { trigger ->
-            val tv = TextView(this).apply {
-                text = "• $trigger"
-                setTextColor(resources.getColor(R.color.text_secondary, null))
-                setPadding(0, 4, 0, 4)
-            }
-            triggerList.addView(tv)
-        }
-
-        applyLevelStyle(view, payload.level)
+        windowManager.addView(view, params)
     }
 
     private fun applyLevelStyle(view: View, level: Int) {
@@ -128,66 +121,71 @@ class OverlayService : Service() {
         }
     }
 
-    private fun setupTypeChallenge(view: View, payload: EmergencyPayload) {
-        val targetSentence = payload.forceSentence
+    private fun setupTypeChallenge(view: View, targetSentence: String, sessionId: String) {
         val input = view.findViewById<EditText>(R.id.typing_input)
-        val proceedBtn = view.findViewById<Button>(R.id.btn_proceed)
         val feedback = view.findViewById<TextView>(R.id.typing_feedback)
-
-        input.isEnabled = false
+        val confirmSection = view.findViewById<View>(R.id.confirm_section)
+        val confirmBtn = view.findViewById<Button>(R.id.btn_confirm)
 
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val typed = s?.toString() ?: ""
                 val match = typed == targetSentence
-                proceedBtn.isEnabled = match
-                feedback.text = when {
-                    match -> getString(R.string.type_correct)
-                    typed.isNotEmpty() -> getString(R.string.type_wrong)
-                    else -> ""
+                if (match) {
+                    feedback.text = "✓ 정확합니다"
+                    feedback.setTextColor(resources.getColor(R.color.warning_yellow, null))
+                    confirmSection.visibility = View.VISIBLE
+                } else {
+                    feedback.text = if (typed.isNotEmpty()) "일치하지 않습니다" else ""
+                    feedback.setTextColor(resources.getColor(R.color.text_secondary, null))
+                    confirmSection.visibility = View.GONE
                 }
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
-        view.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
-            CoroutineScope(Dispatchers.IO).launch {
-                try { ApiClient.cancelEmergency(payload.sessionId) } catch (e: Exception) {}
-            }
-            removeOverlay()
-            stopSelf()
-        }
-
-        proceedBtn.setOnClickListener {
+        confirmBtn.setOnClickListener {
             val durationSeconds = (System.currentTimeMillis() - overlayStartTime) / 1000
             CoroutineScope(Dispatchers.IO).launch {
-                try { ApiClient.proceedEmergency(payload.sessionId, input.text.toString(), durationSeconds) } catch (e: Exception) {}
+                try { ApiClient.proceedEmergency(sessionId, input.text.toString(), durationSeconds) } catch (e: Exception) {}
             }
             removeOverlay()
             stopSelf()
-        }
-
-        view.findViewById<Button>(R.id.btn_open_bitget).setOnClickListener {
-            val intent = packageManager.getLaunchIntentForPackage("com.bitget.exchange")
-            if (intent != null) startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
 
     private fun startCountdown(view: View, seconds: Int) {
         val display = view.findViewById<TextView>(R.id.countdown)
+        val countdownPhase = view.findViewById<View>(R.id.countdown_phase)
+        val typingPhase = view.findViewById<View>(R.id.typing_phase)
         val input = view.findViewById<EditText>(R.id.typing_input)
         var remaining = seconds
 
         countdownJob = CoroutineScope(Dispatchers.Main).launch {
             while (remaining > 0) {
-                val m = remaining / 60
-                val s = remaining % 60
-                display.text = String.format("%02d:%02d", m, s)
+                display.text = remaining.toString()
+
+                // 남은 시간에 따라 색상 변화
+                val color = when {
+                    remaining > seconds * 0.6 -> resources.getColor(R.color.warning_yellow, null)
+                    remaining > seconds * 0.3 -> resources.getColor(R.color.warning_orange, null)
+                    else -> resources.getColor(R.color.warning_red, null)
+                }
+                display.setTextColor(color)
+
+                // 펄스 애니메이션 — 숫자가 튀었다가 줄어듦
+                display.scaleX = 1.3f
+                display.scaleY = 1.3f
+                display.animate().scaleX(1f).scaleY(1f).setDuration(700).start()
+
                 delay(1000)
                 remaining--
             }
-            display.text = "⌨️ 타이핑 가능"
+
+            // 카운트다운 종료 → 타이핑 페이즈로 전환
+            countdownPhase.visibility = View.GONE
+            typingPhase.visibility = View.VISIBLE
             input.isEnabled = true
             input.requestFocus()
         }

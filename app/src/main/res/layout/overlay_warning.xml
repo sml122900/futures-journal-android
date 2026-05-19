@@ -2,15 +2,59 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#D9000000"
+    android:background="#E8000000"
     android:clickable="true"
     android:focusable="true">
 
+    <!-- Phase 1: 카운트다운 (버튼 없음) -->
+    <LinearLayout
+        android:id="@+id/countdown_phase"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <TextView
+            android:id="@+id/header_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚠️ 매매 중단 경고"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/warning_red"
+            android:gravity="center"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/context_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp"
+            android:gravity="center"
+            android:layout_marginBottom="48dp" />
+
+        <TextView
+            android:id="@+id/countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10"
+            android:textSize="120sp"
+            android:textStyle="bold"
+            android:textColor="@color/warning_red"
+            android:layout_gravity="center_horizontal" />
+
+    </LinearLayout>
+
+    <!-- Phase 2: 타이핑 -->
     <ScrollView
+        android:id="@+id/typing_phase"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:padding="24dp">
+        android:padding="24dp"
+        android:visibility="gone">
 
         <LinearLayout
             android:id="@+id/warning_card"
@@ -21,42 +65,9 @@
             android:padding="24dp">
 
             <TextView
-                android:id="@+id/header_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/warning_title"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="@color/warning_red"
-                android:gravity="center"
-                android:layout_marginBottom="24dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/trigger_detected"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                android:layout_marginBottom="8dp" />
-
-            <LinearLayout
-                android:id="@+id/trigger_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp" />
-
-            <TextView
-                android:id="@+id/context_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text_secondary"
-                android:layout_marginBottom="16dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/type_prompt"
+                android:text="다음 문장을 정확히 입력하세요"
                 android:textStyle="bold"
                 android:textColor="@color/white"
                 android:layout_marginBottom="8dp" />
@@ -65,23 +76,23 @@
                 android:id="@+id/target_sentence"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@color/white"
                 android:gravity="center"
                 android:padding="12dp"
                 android:background="@drawable/sentence_bg"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="12dp" />
 
             <EditText
                 android:id="@+id/typing_input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/type_hint"
-                android:enabled="false"
+                android:hint="여기에 입력하세요"
                 android:inputType="text"
                 android:textColor="@color/white"
-                android:textColorHint="@color/text_secondary" />
+                android:textColorHint="@color/text_secondary"
+                android:layout_marginBottom="8dp" />
 
             <TextView
                 android:id="@+id/typing_feedback"
@@ -91,42 +102,36 @@
                 android:textColor="@color/text_secondary"
                 android:layout_marginBottom="16dp" />
 
-            <TextView
-                android:id="@+id/countdown"
+            <!-- 타이핑 완료 후 표시 -->
+            <LinearLayout
+                android:id="@+id/confirm_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="01:00"
-                android:textSize="32sp"
-                android:textStyle="bold"
-                android:textColor="@color/warning_red"
-                android:gravity="center"
-                android:layout_marginBottom="16dp" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <Button
-                android:id="@+id/btn_open_bitget"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_open_bitget"
-                android:backgroundTint="@color/warning_red"
-                android:textColor="@android:color/white"
-                android:layout_marginBottom="8dp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="본인과의 약속을 지키십시오."
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp" />
 
-            <Button
-                android:id="@+id/btn_cancel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_cancel"
-                android:backgroundTint="@color/button_secondary"
-                android:layout_marginBottom="8dp" />
+                <Button
+                    android:id="@+id/btn_confirm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="확인"
+                    android:backgroundTint="@color/warning_red"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp" />
 
-            <Button
-                android:id="@+id/btn_proceed"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_proceed"
-                android:enabled="false"
-                android:backgroundTint="@color/button_disabled" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
+
 </FrameLayout>
