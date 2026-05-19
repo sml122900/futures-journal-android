@@ -75,6 +75,32 @@
 
 ---
 
+### 6. FCM 백그라운드 수신 버그 진단 및 수정 (2026-05-19)
+
+**Problem**
+> Galaxy S26 실기기 테스트에서 FCM 메시지는 수신되나 OverlayService가 시작되지 않았다. 앱이 백그라운드 상태일 때 경고 오버레이가 전혀 뜨지 않아 핵심 기능이 무력화된 상태였다.
+
+**Action**
+> `adb logcat`으로 디바이스 로그를 분석해 `"Notification Channel requested (emergency) has not been created"` 메시지를 포착했다. Firebase 공식 동작 명세를 확인한 결과, 서버 측 `fcm-sender.ts`에서 `data`와 `android.notification`을 동시에 발송하면 앱 백그라운드 시 시스템이 `onMessageReceived`를 건너뛰고 직접 알림 트레이에 표시한다는 것을 확인했다. `android.notification` 블록을 제거해 순수 data message로 변경했다.
+
+**Result**
+> 앱 포그라운드/백그라운드/화면 꺼짐 모든 상태에서 FCM 수신 즉시 `onMessageReceived` → `OverlayService` → 풀스크린 오버레이 파이프라인이 정상 작동. 실기기 E2E 테스트 통과.
+
+---
+
+### 7. 사용자 행동 개입 UX 고도화 — 역동적 카운트다운 + 개인화 멘트 (2026-05-19)
+
+**Problem**
+> 고정된 멘트와 단조로운 카운트다운으로는 사용자가 경고를 형식적으로 통과하는 문제가 있었다. 카운트다운 중에도 버튼이 보여 즉각 닫으려는 충동을 유발했고, 완료 후 흐름도 "진행/취소" 이분법이라 심리적 무게감이 부족했다.
+
+**Action**
+> 카운트다운 단계에서 버튼을 완전히 제거하고, 120sp 대형 숫자에 매 초 1.3배 펄스 애니메이션과 잔여 시간에 따른 노랑→주황→빨강 색상 전환을 적용했다. 타이핑 완료 후에는 "본인과의 약속을 지키십시오." 문구와 단일 "확인" 버튼만 제공해 심리적 마찰을 극대화했다. `OverlayPrefs`(SharedPreferences)로 멘트 13종과 카운트다운 시간을 기기 로컬에 저장하고, SettingsActivity에서 멘트 추가/삭제/선택이 가능하도록 설계했다.
+
+**Result**
+> 카운트다운 → 타이핑 → 확인의 3단계 강제 의식(ritual) 구조 완성. 멘트 개인화로 "내가 선택한 다짐"이라는 심리적 소유감 부여. 기본 멘트 삭제 시 `hidden_defaults` Set으로 관리해 앱 재설치 시 복원 가능한 안전한 삭제 구현.
+
+---
+
 ### 5. EncryptedSharedPreferences로 모바일 인증 토큰 보안 저장 (2026-05-19)
 
 **Problem**
