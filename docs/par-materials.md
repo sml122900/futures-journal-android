@@ -6,6 +6,11 @@
 
 ## 템플릿
 
+### Emergency Brake 오버레이 트리거 메시지 개선 (2026-05-21)
+- **Problem**: 오버레이 화면에서 `symbol × sizeMultiplier배` 형식만 표시돼 사용자가 어떤 룰이 위반됐는지 파악 불가
+- **Action**: `buildTriggerText()` 함수로 3단계 fallback 구현 — 새 서버 발동 메시지 → 타입별 한글 레이블 → 구 사이즈 배수. `EmergencyPayload`에 `triggerMessages` 필드 추가
+- **Result**: 오버레이에서 위반된 룰을 구체적 문장으로 표시. 구 서버 호환 유지
+
 ### [프로젝트/기능명]
 
 **Problem**
