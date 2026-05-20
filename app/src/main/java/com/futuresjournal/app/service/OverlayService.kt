@@ -95,9 +95,9 @@ class OverlayService : Service() {
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_warning, null)
         val view = overlayView!!
 
-        // 컨텍스트 정보 표시
-        view.findViewById<TextView>(R.id.context_text).text =
-            "${payload.symbol} ${payload.side} × ${String.format("%.1f", payload.sizeMultiplier)}배"
+        // 발동된 트리거 메시지 표시
+        val triggerText = buildTriggerText(payload)
+        view.findViewById<TextView>(R.id.context_text).text = triggerText
 
         // 로컬 설정에서 멘트/카운트다운 로드
         val sentence = OverlayPrefs.getSelectedSentence(this)
@@ -114,6 +114,31 @@ class OverlayService : Service() {
         }
 
         windowManager.addView(view, params)
+    }
+
+    private fun buildTriggerText(payload: EmergencyPayload): String {
+        // 새 시스템: triggerMessages 배열 사용
+        val messages = payload.triggerMessages
+        if (!messages.isNullOrEmpty()) {
+            return getString(R.string.trigger_detected) + "\n" +
+                messages.mapIndexed { i, m -> "• $m" }.joinToString("\n")
+        }
+        // 구 시스템 fallback: type → 한글 레이블
+        val typeLabels = mapOf(
+            "max_total_position" to getString(R.string.trigger_max_total_position),
+            "no_trade_window"    to getString(R.string.trigger_no_trade_window),
+            "recurring_no_trade" to getString(R.string.trigger_recurring_no_trade),
+            "max_single_loss"    to getString(R.string.trigger_max_single_loss),
+            "min_interval"       to getString(R.string.trigger_min_interval),
+            "max_single_size"    to getString(R.string.trigger_max_single_size),
+        )
+        if (payload.triggers.isNotEmpty()) {
+            val labels = payload.triggers.map { typeLabels[it] ?: it }
+            return getString(R.string.trigger_detected) + "\n" +
+                labels.mapIndexed { i, l -> "• $l" }.joinToString("\n")
+        }
+        // 최후 fallback: 기존 사이즈 배수 표시
+        return "${payload.symbol} ${payload.side} × ${String.format("%.1f", payload.sizeMultiplier)}배"
     }
 
     private fun applyLevelStyle(view: View, level: Int) {

@@ -21,4 +21,12 @@
     <string name="login_token_hint">서버 토큰 입력</string>
     <string name="login_btn">로그인</string>
     <string name="token_error">토큰 오류</string>
+
+    <!-- Emergency Brake 트리거 타입 -->
+    <string name="trigger_max_total_position">총 포지션 규모 한도 초과</string>
+    <string name="trigger_no_trade_window">매매 금지 시간</string>
+    <string name="trigger_recurring_no_trade">반복 금지 시간대</string>
+    <string name="trigger_max_single_loss">포지션 손실 한도 초과</string>
+    <string name="trigger_min_interval">최소 매매 간격 위반</string>
+    <string name="trigger_max_single_size">1회 진입 한도 초과</string>
 </resources>
