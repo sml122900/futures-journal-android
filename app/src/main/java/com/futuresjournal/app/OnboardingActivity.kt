@@ -96,7 +96,7 @@ class OnboardingActivity : AppCompatActivity() {
         }
 
         val s = steps[step]
-        stepIndicator.text = "${step + 1} / ${steps.size + 1}"
+        stepIndicator.text = "${step + 1} / ${steps.size}"
         stepTitle.text = s.title
         stepDesc.text = s.desc
         btnAction.text = s.actionLabel

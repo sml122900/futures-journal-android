@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.futuresjournal.app.api.ApiClient
 import com.futuresjournal.app.auth.TokenStore
 import com.google.firebase.messaging.FirebaseMessaging
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -42,7 +42,7 @@ class LoginActivity : AppCompatActivity() {
         loginBtn.isEnabled = false
         progress.visibility = View.VISIBLE
 
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val user = ApiClient.verifyToken(token)
                 if (user != null) {

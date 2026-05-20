@@ -2,6 +2,7 @@
 package com.futuresjournal.app.util
 
 import android.content.Context
+import com.futuresjournal.app.util.Logger
 import org.json.JSONArray
 
 object OverlayPrefs {
@@ -45,6 +46,7 @@ object OverlayPrefs {
             val arr = JSONArray(json)
             (0 until arr.length()).map { arr.getString(it) }
         } catch (e: Exception) {
+            Logger.error("OverlayPrefs: JSON parse failed", e)
             emptyList()
         }
     }

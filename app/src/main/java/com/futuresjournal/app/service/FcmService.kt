@@ -9,13 +9,23 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class FcmService : FirebaseMessagingService() {
 
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+
+    override fun onDestroy() {
+        serviceJob.cancel()
+        super.onDestroy()
+    }
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch {
             try {
                 ApiClient.registerDevice(token)
             } catch (e: Exception) {

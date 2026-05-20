@@ -33,6 +33,8 @@ import com.futuresjournal.app.util.OverlayPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -42,6 +44,9 @@ class OverlayService : Service() {
     private var overlayView: View? = null
     private var countdownJob: Job? = null
     private var overlayStartTime: Long = 0
+
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(serviceJob)
 
     companion object {
         private const val NOTIFICATION_ID = 1001
@@ -147,8 +152,12 @@ class OverlayService : Service() {
 
         confirmBtn.setOnClickListener {
             val durationSeconds = (System.currentTimeMillis() - overlayStartTime) / 1000
-            CoroutineScope(Dispatchers.IO).launch {
-                try { ApiClient.proceedEmergency(sessionId, input.text.toString(), durationSeconds) } catch (e: Exception) {}
+            serviceScope.launch(Dispatchers.IO) {
+                try {
+                    ApiClient.proceedEmergency(sessionId, input.text.toString(), durationSeconds)
+                } catch (e: Exception) {
+                    Logger.error("proceedEmergency failed", e)
+                }
             }
             removeOverlay()
             stopSelf()
@@ -162,7 +171,7 @@ class OverlayService : Service() {
         val input = view.findViewById<EditText>(R.id.typing_input)
         var remaining = seconds
 
-        countdownJob = CoroutineScope(Dispatchers.Main).launch {
+        countdownJob = serviceScope.launch(Dispatchers.Main) {
             while (remaining > 0) {
                 display.text = remaining.toString()
 
@@ -193,7 +202,7 @@ class OverlayService : Service() {
 
     private fun removeOverlay() {
         overlayView?.let {
-            try { windowManager.removeView(it) } catch (e: Exception) {}
+            try { windowManager.removeView(it) } catch (e: Exception) { Logger.error("removeView failed", e) }
         }
         overlayView = null
         countdownJob?.cancel()
@@ -269,6 +278,7 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
+        serviceJob.cancel()
         removeOverlay()
         super.onDestroy()
     }
